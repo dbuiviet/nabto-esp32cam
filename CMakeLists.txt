@@ -12,3 +12,4 @@ project(esp32_nabto)
 
 set(COMPONENTS esp32-camera nabtotunnel unabto-esp-fingerprint unabto-esp-idf)
 
+set(EXTRA_COMPONENT_DIRS $ENV{IDF_PATH}/examples/common_components/protocol_examples_common)
