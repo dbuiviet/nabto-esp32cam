@@ -1,60 +1,3 @@
-# uNabto ESP32 cam demo
-
-This project turns the ESP32-CAM into a remote P2P accesible surveillance camera.
-It uses the esp-idf FreeRTOS based core (vs. some other demos which uses the arduino core).
-Also it uses the espressif esp32-cam library with slight modification (we could not get the reset to work).
-
-The video is MJPEG and the module can cope to remotely stream (encode to mjpeg and encrypt and integrity check) a VGA feed at around 10 frames per second.
-
-You should also read the related blog article:
-https://www.nabto.com/esp32/
-
-# The structure
-
-The structure of the project is as follows
-<pre>
-
-    +
-    +-->+-------------+
-    |   |    Main     |        This folder contains the initial setup
-    |   +-------------+        and the application_event() function defining
-    |                          the application
-    +-->+-------------+
-        |  Components |
-        +-------------+
-                      |
-                      +------->+----------------+
-                      |        | unabto         |    Don't edit here (link to other github rep)
-                      |        +----------------+
-                      |
-                      +------->+----------------+
-                      |        | unabto-esp-idf |    The platform integration
-                      |        +----------------+
-                      |
-                      +------->+----------------+
-                      |        | nabtotunnel    |    Nabto tunnel application
-                      |        +----------------+
-                      |
-                      +------->+----------------+
-                      |        | unabto-esp-    |    Client fingerprint database
-                      |        | fingerprint    |    storage in NVS
-                      |        +----------------+
-                      |
-                      +------->+----------------+
-                               | esp32-camera   |    From the espressif github (not a link, since we adjusted)
-                               +----------------+
-</pre>
-
-
-ESP-IDF project has a speciel structure. You can read more about that here:
-https://esp-idf.readthedocs.io/en/v1.0/build_system.html
-The unabto source and the integration code is done as components and therefore resides in the IDF component folder.
-The unabto sdk is a submodule link to the unabto generic source.
-
-The initial setup/commisioning and the application is located in the main folder.
-unabto_application.c contains the application (inside the application_event function), the main.c contains the setup and configuration of the WiFi module.
-
-
 # How to set it up
 
 ## Step 1: Setup the ESP-IDF build environment
@@ -84,6 +27,11 @@ Edit/adjust the following menu items:
 * Nabto key - 32 hex chars : The key for the specific device id you entered in the before mentioned item
 
 Camera wiring! If you have an ESP-EYE board nothing else needs to be set up if you have an “ESP32 Cam” from Ai Tinker you need to configure this too (also in the “Camera configuration” menu).
+
+Add new features for the IoT-Smart Lamp:
+
+* Added Bluetooth BLE
+* Added MQTT Service to turn Lamp ON/OFF
 
 
 ## Step 3: Build the project
