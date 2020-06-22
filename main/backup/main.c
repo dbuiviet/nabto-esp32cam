@@ -22,11 +22,7 @@
 #include <unabto/unabto_app.h>
 #include <unabto_tunnel_select.h>
 
-
-
-//#define MQTT_ENABLE 1
-
-#if defined(MQTT_ENABLE)
+//ESP32-MQTT include
 #include <stdio.h>
 #include <stdint.h>
 #include <stddef.h>
@@ -50,7 +46,6 @@
 #include "esp_log.h"
 #include "mqtt_client.h"
 //ESP32-MQTT include
-#endif // MQTT_ENABLE
 
 #include "esp_event.h"
 #include "sdkconfig.h"
@@ -134,15 +129,10 @@ const int CONNECTED_BIT = BIT0;
 #define CAM_XCLK_FREQ   20000000
 
 
-// xTaskHandle TaskHandle_1 = NULL; //nabto wifi
-// xTaskHandle TaskHandle_2 = NULL; //mqtt
-// xTaskHandle TaskHandle_3 = NULL; //bluetooth-ble
-// xTaskHandle TaskHandle_4 = NULL; //button on/off
 
-TaskHandle_t TaskHandle_1 = NULL; //nabto wifi
-TaskHandle_t TaskHandle_2 = NULL; //mqtt
-TaskHandle_t TaskHandle_3 = NULL; //bluetooth-ble
-TaskHandle_t TaskHandle_4 = NULL; //button on/off
+xTaskHandle TaskHandle_1; //nabto
+xTaskHandle TaskHandle_2; //mqtt
+xTaskHandle TaskHandle_3; //button ON/OFF
 
 
 static camera_config_t camera_config = {
@@ -172,7 +162,7 @@ static camera_config_t camera_config = {
     .pixel_format = PIXFORMAT_JPEG,//YUV422,GRAYSCALE,RGB565,JPEG
     .frame_size = FRAMESIZE_VGA,//QQVGA-QXGA Do not use sizes above QVGA when not JPEG
 
-    .jpeg_quality = 9, //0-63 lower number means higher quality
+    .jpeg_quality = 10, //0-63 lower number means higher quality
     .fb_count = 2 //if more than one, i2s runs in continuous mode. Use only with JPEG
 };
 
@@ -354,6 +344,8 @@ void example_exec_write_event_env(prepare_type_env_t *prepare_write_env, esp_ble
 #include "nvs_flash.h"
 #include "nvs.h"
 //NVS read/write
+
+
 
 /*
  * WIFI event handler
@@ -659,129 +651,124 @@ void button_task(void *pvParameter)
 //added for turn ON/OFF button
 
 
-
-#if defined(MQTT_ENABLE)
-
-    //ESP32-MQTT IMPL
-    static const char *TAG = "MQTT_ESP32";
+//ESP32-MQTT IMPL
+static const char *TAG = "MQTT_ESP32";
 
 
-    static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
-    {
-        esp_mqtt_client_handle_t client = event->client;
-        int msg_id;
-        // your_context_t *context = event->context;
-        switch (event->event_id) {
-            case MQTT_EVENT_CONNECTED:
-                ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
-                msg_id = esp_mqtt_client_publish(client, "/magiclamp/qos1", "data_3", 0, 1, 0);
-                ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
+static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
+{
+    esp_mqtt_client_handle_t client = event->client;
+    int msg_id;
+    // your_context_t *context = event->context;
+    switch (event->event_id) {
+        case MQTT_EVENT_CONNECTED:
+            ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
+            msg_id = esp_mqtt_client_publish(client, "/magiclamp/qos1", "data_3", 0, 1, 0);
+            ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
 
-                msg_id = esp_mqtt_client_subscribe(client, "/magiclamp/qos0", 0);
-                ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
+            msg_id = esp_mqtt_client_subscribe(client, "/magiclamp/qos0", 0);
+            ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
 
-                msg_id = esp_mqtt_client_subscribe(client, "/magiclamp/qos1", 1);
-                ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
+            msg_id = esp_mqtt_client_subscribe(client, "/magiclamp/qos1", 1);
+            ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
 
-                msg_id = esp_mqtt_client_unsubscribe(client, "/magiclamp/qos1");
-                ESP_LOGI(TAG, "sent unsubscribe successful, msg_id=%d", msg_id);
-                break;
-            case MQTT_EVENT_DISCONNECTED:
-                ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
-                break;
+            msg_id = esp_mqtt_client_unsubscribe(client, "/magiclamp/qos1");
+            ESP_LOGI(TAG, "sent unsubscribe successful, msg_id=%d", msg_id);
+            break;
+        case MQTT_EVENT_DISCONNECTED:
+            ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
+            break;
 
-            case MQTT_EVENT_SUBSCRIBED:
-                ESP_LOGI(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
-                msg_id = esp_mqtt_client_publish(client, "/magiclamp/qos0", "data", 0, 0, 0);
-                ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
-                break;
-            case MQTT_EVENT_UNSUBSCRIBED:
-                ESP_LOGI(TAG, "MQTT_EVENT_UNSUBSCRIBED, msg_id=%d", event->msg_id);
-                break;
-            case MQTT_EVENT_PUBLISHED:
-                ESP_LOGI(TAG, "MQTT_EVENT_PUBLISHED, msg_id=%d", event->msg_id);
-                break;
-            case MQTT_EVENT_DATA:
-                ESP_LOGI(TAG, "MQTT_EVENT_DATA");
-                printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
-                printf("DATA=%.*s\r\n", event->data_len, event->data);
+        case MQTT_EVENT_SUBSCRIBED:
+            ESP_LOGI(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
+            msg_id = esp_mqtt_client_publish(client, "/magiclamp/qos0", "data", 0, 0, 0);
+            ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
+            break;
+        case MQTT_EVENT_UNSUBSCRIBED:
+            ESP_LOGI(TAG, "MQTT_EVENT_UNSUBSCRIBED, msg_id=%d", event->msg_id);
+            break;
+        case MQTT_EVENT_PUBLISHED:
+            ESP_LOGI(TAG, "MQTT_EVENT_PUBLISHED, msg_id=%d", event->msg_id);
+            break;
+        case MQTT_EVENT_DATA:
+            ESP_LOGI(TAG, "MQTT_EVENT_DATA");
+            printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
+            printf("DATA=%.*s\r\n", event->data_len, event->data);
 
-                //Turn ON/OFF by MQTT
-                //printf("event->data: %s", event->data);
-                char mqtt_msg[20];
-                snprintf(mqtt_msg, sizeof(mqtt_msg), "%.*s", event->data_len, event->data);
-                //printf("mqtt_msg: %s", mqtt_msg);
-                
-                if (strcmp(mqtt_msg,"on") == 0){
-                    gpio_set_level(LED_GPIO, 1);
-                    vTaskDelay(100 / portTICK_PERIOD_MS);
-                    printf("Lamp ON");
-                }	
-                else if (strcmp(mqtt_msg,"off") == 0){
-                    gpio_set_level(LED_GPIO, 0);
-                    vTaskDelay(100 / portTICK_PERIOD_MS);
-                    printf("Lamp OFF");
-                }
-                //Turn ON/OFF by MQTT
+			//Turn ON/OFF by MQTT
+			//printf("event->data: %s", event->data);
+			char mqtt_msg[20];
+			snprintf(mqtt_msg, sizeof(mqtt_msg), "%.*s", event->data_len, event->data);
+			//printf("mqtt_msg: %s", mqtt_msg);
+			
+			if (strcmp(mqtt_msg,"on") == 0){
+				gpio_set_level(LED_GPIO, 1);
+				vTaskDelay(100 / portTICK_PERIOD_MS);
+				printf("Lamp ON");
+			}	
+			else if (strcmp(mqtt_msg,"off") == 0){
+				gpio_set_level(LED_GPIO, 0);
+				vTaskDelay(100 / portTICK_PERIOD_MS);
+				printf("Lamp OFF");
+			}
+			//Turn ON/OFF by MQTT
 
-                break;
-            case MQTT_EVENT_ERROR:
-                ESP_LOGI(TAG, "MQTT_EVENT_ERROR");
-                break;
-            default:
-                ESP_LOGI(TAG, "Other event id:%d", event->event_id);
-                break;
-        }
-        return ESP_OK;
+            break;
+        case MQTT_EVENT_ERROR:
+            ESP_LOGI(TAG, "MQTT_EVENT_ERROR");
+            break;
+        default:
+            ESP_LOGI(TAG, "Other event id:%d", event->event_id);
+            break;
     }
+    return ESP_OK;
+}
 
-    static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data) {
-        ESP_LOGD(TAG, "Event dispatched from event loop base=%s, event_id=%d", base, event_id);
-        mqtt_event_handler_cb(event_data);
-    }
+static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data) {
+    ESP_LOGD(TAG, "Event dispatched from event loop base=%s, event_id=%d", base, event_id);
+    mqtt_event_handler_cb(event_data);
+}
 
-    static void mqtt_app_start(void *pvParameter)
-    {
-        esp_mqtt_client_config_t mqtt_cfg = {
-            .uri = "mqtt://27.71.228.66:1883" //CONFIG_BROKER_URL,
-        };
-    #if CONFIG_BROKER_URL_FROM_STDIN
-        char line[128];
+static void mqtt_app_start(void *pvParameter)
+{
+    esp_mqtt_client_config_t mqtt_cfg = {
+        .uri = "mqtt://27.71.228.66:1883" //CONFIG_BROKER_URL,
+    };
+#if CONFIG_BROKER_URL_FROM_STDIN
+    char line[128];
 
-        vTaskDelay(200 / portTICK_PERIOD_MS);
+	vTaskDelay(200 / portTICK_PERIOD_MS);
 
-        if (strcmp(mqtt_cfg.uri, "FROM_STDIN") == 0) {
-            int count = 0;
-            printf("Please enter url of mqtt broker\n");
-            while (count < 128) {
-                int c = fgetc(stdin);
-                if (c == '\n') {
-                    line[count] = '\0';
-                    break;
-                } else if (c > 0 && c < 127) {
-                    line[count] = c;
-                    ++count;
-                }
-                vTaskDelay(10 / portTICK_PERIOD_MS);
+    if (strcmp(mqtt_cfg.uri, "FROM_STDIN") == 0) {
+        int count = 0;
+        printf("Please enter url of mqtt broker\n");
+        while (count < 128) {
+            int c = fgetc(stdin);
+            if (c == '\n') {
+                line[count] = '\0';
+                break;
+            } else if (c > 0 && c < 127) {
+                line[count] = c;
+                ++count;
             }
-            mqtt_cfg.uri = line;
-            printf("Broker url: %s\n", line);
-        } else {
-            ESP_LOGE(TAG, "Configuration mismatch: wrong broker url");
-            abort();
+            vTaskDelay(10 / portTICK_PERIOD_MS);
         }
-    #endif /* CONFIG_BROKER_URL_FROM_STDIN */
-
-        esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt_cfg);
-        esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, client);
-        esp_mqtt_client_start(client);
-
-        //important: avoid stackoverflow
-        //vTaskDelete(TaskHandle_2);
+        mqtt_cfg.uri = line;
+        printf("Broker url: %s\n", line);
+    } else {
+        ESP_LOGE(TAG, "Configuration mismatch: wrong broker url");
+        abort();
     }
-    //ESP32-MQTT IMPL
+#endif /* CONFIG_BROKER_URL_FROM_STDIN */
 
-#endif // MQTT_ENABLE
+    esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt_cfg);
+    esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, client);
+    esp_mqtt_client_start(client);
+
+	//important: avoid stackoverflow
+	vTaskDelete(TaskHandle_2);
+}
+//ESP32-MQTT IMPL
 
 
 /*
@@ -835,7 +822,7 @@ void main_task(void *pvParameter)
   tunnel_loop_select();
 
 	//important: avoid stackoverflow
-	//vTaskDelete(TaskHandle_1);
+	vTaskDelete(TaskHandle_1);
 }
 
 
@@ -1593,61 +1580,42 @@ void app_main()
   
   // start the main task
   xTaskCreate(&main_task, "main_task", 8192, NULL, 1, &TaskHandle_1);
-    // if (TaskHandle_1 != NULL){
-    //     vTaskDelete(TaskHandle_1);
-    // }
-
 
   // Go do something else here
 
-#if defined(MQTT_ENABLE)
+	//ESP32-MQTT IMPL
+	ESP_LOGI(TAG, "[APP] Startup..");
+    ESP_LOGI(TAG, "[APP] Free memory: %d bytes", esp_get_free_heap_size());
+    ESP_LOGI(TAG, "[APP] IDF version: %s", esp_get_idf_version());
 
-//ESP32-MQTT IMPL
-        ESP_LOGI(TAG, "[APP] Startup..");
-        ESP_LOGI(TAG, "[APP] Free memory: %d bytes", esp_get_free_heap_size());
-        ESP_LOGI(TAG, "[APP] IDF version: %s", esp_get_idf_version());
+    esp_log_level_set("*", ESP_LOG_INFO);
+    esp_log_level_set("MQTT_CLIENT", ESP_LOG_VERBOSE);
+    esp_log_level_set("MQTT_EXAMPLE", ESP_LOG_VERBOSE);
+    esp_log_level_set("TRANSPORT_TCP", ESP_LOG_VERBOSE);
+    esp_log_level_set("TRANSPORT_SSL", ESP_LOG_VERBOSE);
+    esp_log_level_set("TRANSPORT", ESP_LOG_VERBOSE);
+    esp_log_level_set("OUTBOX", ESP_LOG_VERBOSE);
 
-        esp_log_level_set("*", ESP_LOG_INFO);
-        esp_log_level_set("MQTT_CLIENT", ESP_LOG_VERBOSE);
-        esp_log_level_set("MQTT_EXAMPLE", ESP_LOG_VERBOSE);
-        esp_log_level_set("TRANSPORT_TCP", ESP_LOG_VERBOSE);
-        esp_log_level_set("TRANSPORT_SSL", ESP_LOG_VERBOSE);
-        esp_log_level_set("TRANSPORT", ESP_LOG_VERBOSE);
-        esp_log_level_set("OUTBOX", ESP_LOG_VERBOSE);
+    //ESP_ERROR_CHECK(nvs_flash_init());
+    //tcpip_adapter_init();
 
-        ESP_ERROR_CHECK(nvs_flash_init());
-        tcpip_adapter_init();
-
-        //disable example_connect() func that blocks until connection established and IP address obtained
-        ESP_ERROR_CHECK(example_connect());
+	//disable example_connect() func that blocks until connection established and IP address obtained
+	//ESP_ERROR_CHECK(example_connect());
 
 
-        ESP_ERROR_CHECK(esp_event_loop_create_default());
-        vTaskDelay(10 / portTICK_PERIOD_MS);
-        //ESP32-MQTT IMPL
-        
-        xTaskCreate(&mqtt_app_start, "mqtt_app_start", 8192, NULL, 2, &TaskHandle_2);
-        // if (TaskHandle_2 != NULL){
-        //     vTaskDelete(TaskHandle_2);
-        // }
+    //ESP_ERROR_CHECK(esp_event_loop_create_default());
+	//vTaskDelay(10 / portTICK_PERIOD_MS);
+	//ESP32-MQTT IMPL
+    //diable mqtt_app_start for good!
+	//xTaskCreate(&mqtt_app_start, "mqtt_app_start", 8192, NULL, 2, &TaskHandle_2);
 
-
-        NABTO_LOG_ERROR(("MQTT Init Success "));
-    }    
-
-#endif // MQTT_ENABLE
+    NABTO_LOG_ERROR(("MQTT Init Success "));
 
 
 	//Bluetooth-BLE
-	xTaskCreate(&esp_bt_ble_start, "esp_bt_ble_start", 8192, NULL, 3, &TaskHandle_3);
-    // if (TaskHandle_3 != NULL){
-    //     vTaskDelete(TaskHandle_3);
-    // }
+	xTaskCreate(&esp_bt_ble_start, "esp_bt_ble_start", 8192, NULL, 3, NULL);
 
 	//added button_task func 06/05
-    xTaskCreate(&button_task, "button_task", 8192, NULL, 4, &TaskHandle_4);
-    // if (TaskHandle_4 != NULL){
-    //     vTaskDelete(TaskHandle_4);
-    // }
-    
+    xTaskCreate(&button_task, "button_task", 8192, NULL, 4, NULL);
+  
 }

@@ -3,3 +3,11 @@ sdkconfig.*
 sdkconfig
 *~
 log
+components
+unabto
+docs
+.vscode/c_cpp_properties.json
+.vscode/settings.json
+.idea/
+cmake-build-debug/CMakeFiles/clion-environment.txt
+cmake-build-debug/CMakeFiles/clion-log.txt

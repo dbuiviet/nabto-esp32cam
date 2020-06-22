@@ -23,7 +23,6 @@ static const char* device_interface_id_ = "8eee78e7-8f22-4019-8cee-4dcbc1c8186c"
 static uint16_t device_interface_version_major_ = 1;
 static uint16_t device_interface_version_minor_ = 0;
 
-
 static struct fp_acl_db db_;
 struct fp_mem_persistence fp_file_;
 
@@ -31,10 +30,9 @@ struct fp_mem_persistence fp_file_;
 #define REQUIRES_OWNER FP_ACL_PERMISSION_ADMIN
 
 //nabto on/off
-static uint8_t lamp_state_ = 0;
+static uint8_t lamp_state_ = 1;
 #define LED_GPIO 15
 //nabto on/off
-
 
 void debug_dump_acl() {
     void* it = db_.first();
@@ -87,25 +85,22 @@ void demo_init() {
 
   //snprintf(device_name_, sizeof(device_name_), DEVICE_NAME_DEFAULT);
   //updateLed();
-
-  //Turn Lamp Off first
-  //gpio_set_level(LED_GPIO, 0);
 }
 
 
 void demo_application_tick() {
-    //NABTO_LOG_INFO(("demo_application_tick called"));
+    NABTO_LOG_INFO(("demo_application_tick called"));
 
     //nabto on/off
     if (lamp_state_){
         gpio_set_level(LED_GPIO, 1);
         //printf("TURN ON");
-        NABTO_LOG_INFO(("Nabto - Lamp ON"));
+        NABTO_LOG_INFO(("Lamp ON"));
     }
     else{
         gpio_set_level(LED_GPIO, 0);
         //printf("TURN OFF");
-        NABTO_LOG_INFO(("Nabto - Lamp OFF"));
+        NABTO_LOG_INFO(("Lamp OFF"));
     }
     //nabto on/off
 }
@@ -190,22 +185,24 @@ application_event_result application_event(application_request* request,
         // PPKA access control
         return fp_acl_ae_dispatch(11000, request, query_request, query_response);
         
-    } else if (request->queryId == 20010){
-         //nabto on/off
+    } 
+	//nabto on/off
+    else if (request->queryId == 20010){
 		if (!fp_acl_is_request_allowed(request, REQUIRES_GUEST)) return AER_REQ_NO_ACCESS;
         if (!unabto_query_read_uint8(query_request, &lamp_state_)) return AER_REQ_TOO_SMALL;
         if (!unabto_query_write_uint8(query_response, lamp_state_)) return AER_REQ_RSP_TOO_LARGE;
         NABTO_LOG_INFO(("Got (and returned) state %d", lamp_state_));
         demo_application_tick();
         return AER_REQ_RESPONSE_READY;
-        //nabto on/off 
 	}
-    else {
+	//nabto on/off
+	else {
         NABTO_LOG_WARN(("Unhandled query id: %u", request->queryId));
         return AER_REQ_INV_QUERY_ID;
     }
 
 }
+
 
 
 bool application_poll_query(application_request** applicationRequest) {
